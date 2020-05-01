@@ -2,49 +2,56 @@ import sys
 import xml.etree.ElementTree as ET
 
 
-def generateModelClass(filename):
+def generate_converter_method(table):
+    table_name = table.attrib["name"]
+    print(
+        "    public function to"
+        + to_pascal_case(table_name)
+        + "(ORM $item) : "
+        + to_pascal_case(table_name)
+        + " {"
+    )
+    print(
+        "        $"
+        + to_camel_case(table_name)
+        + " = new "
+        + to_pascal_case(table_name)
+        + "();"
+    )
+
+    for field in table.findall("./field"):
+        field_name = field.attrib["Field"]
+        print(
+            "        $"
+            + to_camel_case(table_name)
+            + "->"
+            + to_camel_case(field_name)
+            + " = $item->"
+            + field_name
+            + ";"
+        )
+
+    print("        return $" + to_camel_case(table_name) + ";")
+    print("    }")
+
+
+def generate_model_class(filename):
     tree = ET.parse(filename)
     root = tree.getroot()
     for table in root.findall("./database/table_structure"):
-        tableName = table.attrib["name"]
-        print("class " + to_pascal_case(tableName) + " {")
+        table_name = table.attrib["name"]
+        print("class " + to_pascal_case(table_name) + " {")
 
+        # generate properties.
         for field in table.findall("./field"):
-            fieldComment = field.attrib["Comment"]
-            fieldName = field.attrib["Field"]
-            print("    // " + fieldComment)
-            print("    public $" + to_camel_case(fieldName) + ";")
+            field_comment = field.attrib["Comment"]
+            field_name = field.attrib["Field"]
+            print("    // " + field_comment)
+            print("    public $" + to_camel_case(field_name) + ";")
             print("")
 
-        print(
-            "    public function to"
-            + to_pascal_case(tableName)
-            + "(ORM $item) : "
-            + to_pascal_case(tableName)
-            + " {"
-        )
-        print(
-            "        $"
-            + to_camel_case(tableName)
-            + " = new "
-            + to_pascal_case(tableName)
-            + "();"
-        )
-
-        for field in table.findall("./field"):
-            fieldName = field.attrib["Field"]
-            print(
-                "        $"
-                + to_camel_case(tableName)
-                + "->"
-                + to_camel_case(fieldName)
-                + " = $item->"
-                + fieldName
-                + ";"
-            )
-
-        print("        return $" + to_camel_case(tableName) + ";")
-        print("    }")
+        # generate converter.
+        generate_converter_method(table)
 
         print("}")
 
@@ -63,6 +70,6 @@ if __name__ == "__main__":
     args = sys.argv
     if 2 == len(args):
         filename = args[1]
-        generateModelClass(filename)
+        generate_model_class(filename)
     else:
         print("Usage: python gen_model.py [filename.xml]")
